@@ -85,7 +85,14 @@ void ArgumentProcessing(struct argFields *argumentsOfprogram, int argc, char *ar
         {
             i++;
             if (i < argc)
+            {
                 argumentsOfprogram->port = atoi(argv[i]);
+                if(argumentsOfprogram->port < 0)
+                {
+                    fprintf(stderr, "Invalid port number, number has to be > than -1\n");
+                    exit(1);
+                }
+            }
             
         }
         else if(!strcmp(argv[i],"--tcp") || !strcmp(argv[i], "-t"))
@@ -108,11 +115,18 @@ void ArgumentProcessing(struct argFields *argumentsOfprogram, int argc, char *ar
         {
             i++;
             if (i < argc)
+            {
                 argumentsOfprogram->n = atoi(argv[i]);
+                if(argumentsOfprogram->n < 1)
+                {
+                    fprintf(stderr, "Invalid n number, number has to be > than 0\n");
+                    exit(1);
+                }
+            }   
         }
         else 
         {
-            fprintf(stderr, "Unknown2 program argument\n");
+            fprintf(stderr, "Unknown program argument\n");
             exit(1);
         }
 
@@ -144,7 +158,7 @@ int main(int argc, char *argv[])
         exit(0);
     }
         
-        //TODO find the IPV4 network number and netmask for a device
+        // find the IPV4 network number and netmask for a device
     if(pcap_lookupnet(argumentsOfprogram.interface, &pNet, &pMask, errbuf) == -1)
     {
         fprintf(stderr, "Can't get netmask for device\n");
@@ -168,8 +182,77 @@ int main(int argc, char *argv[])
     }
 
     struct bpf_program filteredProgram;
+    char filterString[100] = {'\0'};
+    char ports[20] = {'\0'};
+
+        //Create string for ports
+    if (argumentsOfprogram.port == -1)
+        sprintf(ports, "portrange 0-65535");
+    else
+        sprintf(ports, "port %d", argumentsOfprogram.port);
     
-    if (pcap_compile(connection, &filteredProgram, "(tcp and port 22) or (udp and port 22) or (arp) or (icmp)", 1, pNet) == -1)
+
+
+        //Creating filterString depends on program arguments
+    if(argumentsOfprogram.tcp)
+    {
+        sprintf(filterString, "(tcp and %s)", ports);
+    }
+
+    if(argumentsOfprogram.udp)
+    {
+        char  helpString[100] = {'\0'};
+
+        if(filterString[0] != '\0')
+        {
+            sprintf(helpString, "or (udp and %s)",ports );
+            strcat(filterString, helpString);
+        }
+        else
+        {
+            sprintf(filterString, "(udp and %s)",ports );
+        }
+    }
+
+    if(argumentsOfprogram.arp)
+    {
+        char  helpString[100] = {'\0'};
+
+        if(filterString[0] != '\0')
+        {
+            sprintf(helpString, "or (arp)");
+            strcat(filterString, helpString);
+        }
+        else
+        {
+            sprintf(filterString, "(arp)");
+        }
+
+    }
+
+    if(argumentsOfprogram.icmp)
+    {
+        char  helpString[100] = {'\0'};
+
+        if(filterString[0] != '\0')
+        {
+            sprintf(helpString, "or (icmp)");
+            strcat(filterString, helpString);
+        }
+        else
+        {
+            sprintf(filterString, "(icmp)");
+        }
+
+    }
+    
+    if(!argumentsOfprogram.tcp && !argumentsOfprogram.udp && !argumentsOfprogram.arp && !argumentsOfprogram.icmp)
+    {
+        sprintf(filterString, "(tcp and %s) or (udp and %s) or (arp) or (icmp)", ports, ports);    
+    }
+
+
+    if (pcap_compile(connection, &filteredProgram, filterString, 1, pNet) == -1)
     {
         
         fprintf(stderr, "Can't parse filter\n");
