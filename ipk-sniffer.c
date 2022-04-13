@@ -130,13 +130,35 @@ int main(int argc, char *argv[])
     char errbuf[PCAP_ERRBUF_SIZE];
     pcap_if_t *alldevs, *device;
     struct argFields argumentsOfprogram = {NULL, -1, 1, false, false, false, false};
+    bpf_u_int32 pMask;
+    bpf_u_int32 pNet;
+    pcap_t *connection;
 
     ArgumentProcessing(&argumentsOfprogram, argc, argv);
     //printf("%s, %d, %d, %d, %d, %d, %d\n", argumentsOfprogram.interface, argumentsOfprogram.port, argumentsOfprogram.n, argumentsOfprogram.tcp, argumentsOfprogram.udp, argumentsOfprogram.arp, argumentsOfprogram.icmp);
 
     
     if (argumentsOfprogram.interface == NULL)
+    {
         DisplayAllAvailableInterfaces();
+        exit(0);
+    }
+        
+        //TODO find the IPV4 network number and netmask for a device
+    //pcap_lookupnet(argumentsOfprogram.interface, &pNet, &pMask, errbuf);
 
+    //printf("interfcae: %s\n", argumentsOfprogram.interface);
+
+        // Open connection on specific interface;
+    connection = pcap_open_live(argumentsOfprogram.interface, BUFSIZ, 1, 1000, errbuf);
+    if(connection == NULL)
+    {
+        fprintf(stderr, "Can't open connection on interface due to: %s\n", errbuf);
+        exit(2);
+    }
+
+
+        // Close connection on interface
+    pcap_close(connection);
     return 0;
 }
