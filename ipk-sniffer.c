@@ -12,6 +12,7 @@
 #include<stdio.h>
 #include<stdbool.h>
 #include<string.h>
+#include<time.h>
 
 struct argFields 
 {
@@ -274,7 +275,39 @@ int main(int argc, char *argv[])
     for(int i = 0; i < argumentsOfprogram.n; i++)
     {
         packet = pcap_next(connection, &header);
-        printf("Header length %d, caplen: %d\n",header.len, header.caplen);
+        printf("Header length %d, caplen: %d, timestaps: %ld",header.len, header.caplen, header.ts.tv_sec);
+        struct tm ts;
+        char timeBuffer[100] = {'\0'};
+        ts = *localtime(&header.ts.tv_sec);
+        int microseconds = header.ts.tv_usec;
+        int miliseconds = microseconds/1000;
+
+
+
+        strftime(timeBuffer, sizeof(timeBuffer), "%FT%T", &ts);
+
+        char milisecondsBuffer[100] = {'\0'};
+
+        sprintf(milisecondsBuffer, ".%3d", miliseconds);
+        strcat(timeBuffer, milisecondsBuffer);
+
+        tzset();
+        int timeZone = -timezone/3600;
+
+        if(timeZone < 0 )
+            sprintf(milisecondsBuffer, "%03d:00", timeZone);
+        else
+        {
+            sprintf(milisecondsBuffer, "+%02d:00", timeZone);
+        }
+        strcat(timeBuffer, milisecondsBuffer);
+
+        printf(" time: %s\n", timeBuffer);
+
+
+        struct ether_header *ethHead = (struct ether_header *)packet;
+        printf("%X\n", ntohs(ethHead->ether_type));
+
     }
 
         // Close connection on interface
