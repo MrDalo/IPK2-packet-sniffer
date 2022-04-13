@@ -36,6 +36,33 @@ static struct option long_options[] =
     {NULL, 0, NULL, 0}
 };
 
+
+void DisplayAllAvailableInterfaces()
+{
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_if_t *alldevs, *device;
+
+    if(pcap_findalldevs(&alldevs, errbuf) == -1)
+    {
+        fprintf(stderr, "Error in function pcap_findalldevs\n");
+        exit(1);
+    }
+
+    device = alldevs;
+    
+    int index = 1;
+    printf("List of all interfaces: \n");
+    while(device != NULL)
+    {
+        printf("%d. %s\n",index, device->name);
+        device = device->next;
+        index++;
+    }
+
+    pcap_freealldevs(alldevs);
+}
+
+
 void ArgumentProcessing(struct argFields *argumentsOfprogram, int argc, char *argv[] )
 {
 
@@ -100,10 +127,16 @@ int main(int argc, char *argv[])
 {
     
     int opt;
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_if_t *alldevs, *device;
     struct argFields argumentsOfprogram = {NULL, -1, 1, false, false, false, false};
 
     ArgumentProcessing(&argumentsOfprogram, argc, argv);
     //printf("%s, %d, %d, %d, %d, %d, %d\n", argumentsOfprogram.interface, argumentsOfprogram.port, argumentsOfprogram.n, argumentsOfprogram.tcp, argumentsOfprogram.udp, argumentsOfprogram.arp, argumentsOfprogram.icmp);
+
+    
+    if (argumentsOfprogram.interface == NULL)
+        DisplayAllAvailableInterfaces();
 
     return 0;
 }

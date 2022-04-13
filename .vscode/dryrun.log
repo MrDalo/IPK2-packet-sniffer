@@ -1,5 +1,5 @@
-make --dry-run --always-make --keep-going --print-directory
+make --dry-run --keep-going --print-directory
 make: Entering directory '/home/dalibor/Desktop/IPK2'
-gcc ipk-sniffer.c -o ipk-sniffer
+make: 'ipk-sniffer' is up to date.
 make: Leaving directory '/home/dalibor/Desktop/IPK2'
  
