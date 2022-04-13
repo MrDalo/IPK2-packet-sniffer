@@ -267,6 +267,16 @@ int main(int argc, char *argv[])
 
     }
 
+    
+    struct pcap_pkthdr header;
+    const u_char *packet;
+    
+    for(int i = 0; i < argumentsOfprogram.n; i++)
+    {
+        packet = pcap_next(connection, &header);
+        printf("Header length %d, caplen: %d\n",header.len, header.caplen);
+    }
+
         // Close connection on interface
     pcap_close(connection);
     return 0;
