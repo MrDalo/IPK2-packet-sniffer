@@ -145,7 +145,11 @@ int main(int argc, char *argv[])
     }
         
         //TODO find the IPV4 network number and netmask for a device
-    //pcap_lookupnet(argumentsOfprogram.interface, &pNet, &pMask, errbuf);
+    if(pcap_lookupnet(argumentsOfprogram.interface, &pNet, &pMask, errbuf) == -1)
+    {
+        fprintf(stderr, "Can't get netmask for device\n");
+        exit(2);
+    }
 
     //printf("interfcae: %s\n", argumentsOfprogram.interface);
 
@@ -157,6 +161,28 @@ int main(int argc, char *argv[])
         exit(2);
     }
 
+    if(pcap_datalink(connection) != DLT_EN10MB)
+    {
+        fprintf(stderr, "Interface  %s does not provide Ethernet headers - not supported\n", argumentsOfprogram.interface);
+        exit(2);
+    }
+
+    struct bpf_program filteredProgram;
+    
+    if (pcap_compile(connection, &filteredProgram, "(tcp and port 22) or (udp and port 22) or (arp) or (icmp)", 1, pNet) == -1)
+    {
+        
+        fprintf(stderr, "Can't parse filter\n");
+        exit(2);
+
+    }
+
+    if(pcap_setfilter(connection, &filteredProgram) == -1)
+    {
+        fprintf(stderr, "Can't install filter\n");
+        exit(2);
+
+    }
 
         // Close connection on interface
     pcap_close(connection);
