@@ -3,6 +3,7 @@
 #include <pcap.h>
 //#include <bitset.h>
 #include<arpa/inet.h>
+#include <netinet/if_ether.h>
 #include<netinet/ether.h>
 #include<netinet/ip6.h>
 #include<netinet/tcp.h>
@@ -13,6 +14,8 @@
 #include<stdbool.h>
 #include<string.h>
 #include<time.h>
+
+
 
 struct argFields 
 {
@@ -27,15 +30,125 @@ struct argFields
 };
 
 
-static struct option long_options[] =
+
+    // https://stackoverflow.com/questions/7939238/dereferencing-pointer-to-incomplete-type-with-struct-ip-and-also-with-struct-iph
+void PrintPacketInHex(char *mesg, unsigned char *p, int len){
+    printf("%s", mesg);
+    while(len--)
+    {   
+        if (len == 0)
+            printf("%02X",*p);
+        else
+            printf("%02X:",*p);
+        p++;
+    }
+}
+
+
+void TimeStampCreating(char timeBuffer[100], struct pcap_pkthdr header)
 {
-    {"interface", optional_argument, NULL, 'i'},
-    {"tcp", no_argument, NULL, 't'},
-    {"udp", no_argument, NULL, 'u'},
-    {"arp", no_argument, NULL, 'a'},
-    {"icmp", no_argument, NULL, 'c'},
-    {NULL, 0, NULL, 0}
-};
+    struct tm ts;
+        ts = *localtime(&header.ts.tv_sec);
+        int microseconds = header.ts.tv_usec;
+        int miliseconds = microseconds/1000;
+
+
+
+        strftime(timeBuffer, sizeof(char)*100, "%FT%T", &ts);
+
+        char milisecondsBuffer[100] = {'\0'};
+
+        sprintf(milisecondsBuffer, ".%03d", miliseconds);
+        strcat(timeBuffer, milisecondsBuffer);
+
+        tzset();
+        int timeZone = -timezone/3600;
+
+        if(timeZone < 0 )
+            sprintf(milisecondsBuffer, "%03d:00", timeZone);
+        else
+        {
+            sprintf(milisecondsBuffer, "+%02d:00", timeZone);
+        }
+        strcat(timeBuffer, milisecondsBuffer);
+
+
+}
+
+void FilterStringCreating(char filterString[], struct argFields argumentsOfprogram, struct bpf_program *filteredProgram)
+{
+    char ports[20] = {'\0'};
+
+        //Create string for ports
+    if (argumentsOfprogram.port == -1)
+        sprintf(ports, "portrange 0-65535");
+    else
+        sprintf(ports, "port %d", argumentsOfprogram.port);
+
+        //Creating filterString depends on program arguments
+    if(argumentsOfprogram.tcp)
+    {
+        sprintf(filterString, "(tcp and %s)", ports);
+    }
+
+    if(argumentsOfprogram.udp)
+    {
+        char  helpString[100] = {'\0'};
+
+        if(filterString[0] != '\0')
+        {
+            sprintf(helpString, "or (udp and %s)",ports );
+            strcat(filterString, helpString);
+        }
+        else
+        {
+            sprintf(filterString, "(udp and %s)",ports );
+        }
+    }
+
+    if(argumentsOfprogram.arp)
+    {
+        char  helpString[100] = {'\0'};
+
+        if(filterString[0] != '\0')
+        {
+            sprintf(helpString, "or (arp)");
+            strcat(filterString, helpString);
+        }
+        else
+        {
+            sprintf(filterString, "(arp)");
+        }
+
+    }
+
+    if(argumentsOfprogram.icmp)
+    {
+        char  helpString[100] = {'\0'};
+
+        if(filterString[0] != '\0')
+        {
+            sprintf(helpString, "or (icmp)");
+            strcat(filterString, helpString);
+        }
+        else
+        {
+            sprintf(filterString, "(icmp)");
+        }
+
+    }
+    
+    if(!argumentsOfprogram.tcp && !argumentsOfprogram.udp && !argumentsOfprogram.arp && !argumentsOfprogram.icmp)
+    {
+        sprintf(filterString, "(tcp and %s) or (udp and %s) or (arp) or (icmp)", ports, ports);    
+    }
+
+
+    
+
+
+
+}
 
 
 void DisplayAllAvailableInterfaces()
@@ -169,7 +282,7 @@ int main(int argc, char *argv[])
     //printf("interfcae: %s\n", argumentsOfprogram.interface);
 
         // Open connection on specific interface;
-    connection = pcap_open_live(argumentsOfprogram.interface, BUFSIZ, 1, 1000, errbuf);
+    connection = pcap_open_live(argumentsOfprogram.interface, BUFSIZ, 1, 1, errbuf);
     if(connection == NULL)
     {
         fprintf(stderr, "Can't open connection on interface due to: %s\n", errbuf);
@@ -184,75 +297,11 @@ int main(int argc, char *argv[])
 
     struct bpf_program filteredProgram;
     char filterString[100] = {'\0'};
-    char ports[20] = {'\0'};
-
-        //Create string for ports
-    if (argumentsOfprogram.port == -1)
-        sprintf(ports, "portrange 0-65535");
-    else
-        sprintf(ports, "port %d", argumentsOfprogram.port);
     
-
-
-        //Creating filterString depends on program arguments
-    if(argumentsOfprogram.tcp)
-    {
-        sprintf(filterString, "(tcp and %s)", ports);
-    }
-
-    if(argumentsOfprogram.udp)
-    {
-        char  helpString[100] = {'\0'};
-
-        if(filterString[0] != '\0')
-        {
-            sprintf(helpString, "or (udp and %s)",ports );
-            strcat(filterString, helpString);
-        }
-        else
-        {
-            sprintf(filterString, "(udp and %s)",ports );
-        }
-    }
-
-    if(argumentsOfprogram.arp)
-    {
-        char  helpString[100] = {'\0'};
-
-        if(filterString[0] != '\0')
-        {
-            sprintf(helpString, "or (arp)");
-            strcat(filterString, helpString);
-        }
-        else
-        {
-            sprintf(filterString, "(arp)");
-        }
-
-    }
-
-    if(argumentsOfprogram.icmp)
-    {
-        char  helpString[100] = {'\0'};
-
-        if(filterString[0] != '\0')
-        {
-            sprintf(helpString, "or (icmp)");
-            strcat(filterString, helpString);
-        }
-        else
-        {
-            sprintf(filterString, "(icmp)");
-        }
-
-    }
     
-    if(!argumentsOfprogram.tcp && !argumentsOfprogram.udp && !argumentsOfprogram.arp && !argumentsOfprogram.icmp)
-    {
-        sprintf(filterString, "(tcp and %s) or (udp and %s) or (arp) or (icmp)", ports, ports);    
-    }
-
-
+        //Create filterString
+    FilterStringCreating(filterString, argumentsOfprogram, &filteredProgram);
+    
     if (pcap_compile(connection, &filteredProgram, filterString, 1, pNet) == -1)
     {
         
@@ -267,7 +316,6 @@ int main(int argc, char *argv[])
         exit(2);
 
     }
-
     
     struct pcap_pkthdr header;
     const u_char *packet;
@@ -275,38 +323,21 @@ int main(int argc, char *argv[])
     for(int i = 0; i < argumentsOfprogram.n; i++)
     {
         packet = pcap_next(connection, &header);
-        printf("Header length %d, caplen: %d, timestaps: %ld",header.len, header.caplen, header.ts.tv_sec);
-        struct tm ts;
+        printf("Header length %d, caplen: %d, ",header.len, header.caplen);
         char timeBuffer[100] = {'\0'};
-        ts = *localtime(&header.ts.tv_sec);
-        int microseconds = header.ts.tv_usec;
-        int miliseconds = microseconds/1000;
 
+        TimeStampCreating(timeBuffer, header);
 
+        printf("timestamp: %s\n", timeBuffer);
 
-        strftime(timeBuffer, sizeof(timeBuffer), "%FT%T", &ts);
+        
+        struct ether_header *nextHeader = (struct ether_header *)packet;
 
-        char milisecondsBuffer[100] = {'\0'};
-
-        sprintf(milisecondsBuffer, ".%3d", miliseconds);
-        strcat(timeBuffer, milisecondsBuffer);
-
-        tzset();
-        int timeZone = -timezone/3600;
-
-        if(timeZone < 0 )
-            sprintf(milisecondsBuffer, "%03d:00", timeZone);
-        else
-        {
-            sprintf(milisecondsBuffer, "+%02d:00", timeZone);
-        }
-        strcat(timeBuffer, milisecondsBuffer);
-
-        printf(" time: %s\n", timeBuffer);
-
-
-        struct ether_header *ethHead = (struct ether_header *)packet;
-        printf("%X\n", ntohs(ethHead->ether_type));
+        PrintPacketInHex("destination MAC : ", nextHeader->ether_dhost,6);
+        printf("\n");
+        PrintPacketInHex("source MAC : ", nextHeader->ether_shost,6);
+        printf("\n\n");
+        
 
     }
 
