@@ -143,11 +143,6 @@ void FilterStringCreating(char filterString[], struct argFields argumentsOfprogr
         sprintf(filterString, "(tcp and %s) or (udp and %s) or (arp) or (icmp)", ports, ports);    
     }
 
-
-    
-
-
-
 }
 
 
@@ -323,20 +318,47 @@ int main(int argc, char *argv[])
     for(int i = 0; i < argumentsOfprogram.n; i++)
     {
         packet = pcap_next(connection, &header);
+            //DLZKA framu
         printf("Header length %d, caplen: %d, ",header.len, header.caplen);
         char timeBuffer[100] = {'\0'};
 
         TimeStampCreating(timeBuffer, header);
-
+            //TIMESTAMP
         printf("timestamp: %s\n", timeBuffer);
+        
 
         
-        struct ether_header *nextHeader = (struct ether_header *)packet;
-
-        PrintPacketInHex("destination MAC : ", nextHeader->ether_dhost,6);
+        struct ether_header *ethHeader = (struct ether_header *)packet;
+            //PROTOKOL A JEHO str a dst MAC adresa
+        printf("protocol : %x\n", ntohs(ethHeader->ether_type));
+        PrintPacketInHex("destination MAC : ", ethHeader->ether_dhost,6);
         printf("\n");
-        PrintPacketInHex("source MAC : ", nextHeader->ether_shost,6);
+        PrintPacketInHex("source MAC : ", ethHeader->ether_shost,6);
         printf("\n\n");
+        
+        if(ntohs(ethHeader->ether_type) == ETHERTYPE_IP)
+        {
+            struct ip * ipHeader = (struct ip*)(packet + 14);
+            struct udphdr *udpHeader = (struct udphdr *)(packet + 14 + 20);
+            char ipBuffer[100] = {'\0'};
+                //src a dest IP adresa
+            printf("verzia: %d, protocol: %d, lenght: %d,destAdr: %s, srcAdr: %s \n", ipHeader->ip_v, ipHeader->ip_p, ipHeader->ip_len, inet_ntop(AF_INET, &ipHeader->ip_dst.s_addr, ipBuffer, 100), inet_ntop(AF_INET, &ipHeader->ip_src.s_addr, ipBuffer, 100));
+        
+
+
+        }
+        else if (ntohs(ethHeader->ether_type) == ETHERTYPE_ARP)
+        {
+            struct ether_arp * arpHeader = (struct ether_arp*)(packet + 14);
+            char arpBuffer[100] = {'\0'};
+            printf("ARP source ip: %s", inet_ntop(AF_INET, &arpHeader->arp_spa, arpBuffer, 100));
+            printf("\n");
+            printf("ARP destination ip: %s", inet_ntop(AF_INET, &arpHeader->arp_spa, arpBuffer, 100));
+            printf("\n");
+
+
+
+        }
         
 
     }

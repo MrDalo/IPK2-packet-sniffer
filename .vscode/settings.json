@@ -3,6 +3,7 @@
     "files.associations": {
         "ether.h": "c",
         "inet.h": "c",
-        "if_ether.h": "c"
+        "if_ether.h": "c",
+        "types.h": "c"
     }
 }
