@@ -354,13 +354,13 @@ int main(int argc, char *argv[])
             else if(ipHeader->ip_p == 6)
             {   //TCP protocol, obsahuje porty
                 struct tcphdr *tcpHeader = (struct tcphdr *)(packet + 14 + ipHeader->ip_hl*4);
-                printf("TCP: destination port: %d, source port: %d\n", tcpHeader->th_dport, tcpHeader->th_sport);
+                printf("TCP: destination port: %d, source port: %d\n", ntohs(tcpHeader->th_dport), ntohs(tcpHeader->th_sport));
 
             }
             else if(ipHeader->ip_p == 17)
             {   //UDP protocol, obsahuje porty
                 struct udphdr *udpHeader = (struct udphdr *)(packet + 14 + ipHeader->ip_hl*4);
-                printf("UDP: destination port: %d, source port: %d\n", udpHeader->uh_dport, udpHeader->uh_sport);
+                printf("UDP: destination port: %d, source port: %d\n", ntohs(udpHeader->uh_dport), ntohs(udpHeader->uh_sport));
 
             }
 
@@ -382,8 +382,27 @@ int main(int argc, char *argv[])
         {
             struct ip6_hdr * ip6Header = (struct ip6_hdr*)(packet + 14);
             char ip6Buffer[100] = {'\0'};
-            printf("IPv6: destination address: %s, source address: %s \n", inet_ntop(AF_INET, &ip6Header->ip6_dst, ip6Buffer, 100), inet_ntop(AF_INET, &ip6Header->ip6_src, ip6Buffer, 100));
+            printf("IPv6: destination address: %s, source address: %s \n", inet_ntop(AF_INET6, &ip6Header->ip6_dst, ip6Buffer, 100), inet_ntop(AF_INET6, &ip6Header->ip6_src, ip6Buffer, 100));
+            
+            if(ip6Header->ip6_ctlun.ip6_un1.ip6_un1_nxt == 58)
+            {   //ICMP protokol
+                struct icmphdr *icmpHeader = (struct icmphdr *)(packet + 14 + 40);
 
+            }
+            else if(ip6Header->ip6_ctlun.ip6_un1.ip6_un1_nxt == 6)
+            {   //TCP protocol, obsahuje porty
+                struct tcphdr *tcpHeader = (struct tcphdr *)(packet + 14 + 40);
+                printf("TCP: destination port: %d, source port: %d\n", ntohs(tcpHeader->th_dport), ntohs(tcpHeader->th_sport));
+
+            }
+            else if(ip6Header->ip6_ctlun.ip6_un1.ip6_un1_nxt == 17)
+            {
+                //UDP protocol, obsahuje porty
+                struct udphdr *udpHeader = (struct udphdr *)(packet + 14 + 40);
+                printf("UDP: destination port: %d, source port: %d\n", ntohs(udpHeader->uh_dport), ntohs(udpHeader->uh_sport));
+
+
+            }
         }
         
 
