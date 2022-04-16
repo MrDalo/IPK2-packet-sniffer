@@ -8,6 +8,7 @@
 #include<netinet/ip6.h>
 #include<netinet/tcp.h>
 #include<netinet/ip_icmp.h>
+#include<netinet/udp.h>
 #include<unistd.h>
 #include<stdlib.h>
 #include<stdio.h>
@@ -334,29 +335,54 @@ int main(int argc, char *argv[])
         PrintPacketInHex("destination MAC : ", ethHeader->ether_dhost,6);
         printf("\n");
         PrintPacketInHex("source MAC : ", ethHeader->ether_shost,6);
-        printf("\n\n");
+        printf("\n");
         
         if(ntohs(ethHeader->ether_type) == ETHERTYPE_IP)
         {
             struct ip * ipHeader = (struct ip*)(packet + 14);
-            struct udphdr *udpHeader = (struct udphdr *)(packet + 14 + 20);
             char ipBuffer[100] = {'\0'};
                 //src a dest IP adresa
-            printf("verzia: %d, protocol: %d, lenght: %d,destAdr: %s, srcAdr: %s \n", ipHeader->ip_v, ipHeader->ip_p, ipHeader->ip_len, inet_ntop(AF_INET, &ipHeader->ip_dst.s_addr, ipBuffer, 100), inet_ntop(AF_INET, &ipHeader->ip_src.s_addr, ipBuffer, 100));
-        
+            printf("verzia: %d, protocol: %d, lenght: %d,destAdr: %s, srcAdr: %s, IHL: %d \n\n", ipHeader->ip_v, ipHeader->ip_p, ipHeader->ip_len, inet_ntop(AF_INET, &ipHeader->ip_dst.s_addr, ipBuffer, 100), inet_ntop(AF_INET, &ipHeader->ip_src.s_addr, ipBuffer, 100), ipHeader->ip_hl);
+
+                // IPv4 nema fixnu dlzku headru, preto je v premenne ip_hl ulozena dlzka headru v 4 bytovych slovach, takze 32 bitov.
+                // ip_hl nasobim 4 pretoze dlzka jedneho riadku v ipv4 hlavicke je 32 bitov - > 4 byty a IHL tym padom ukazuje pocet riadkov
+            if(ipHeader->ip_p == 1)
+            {   //ICMP protocol, neobsahuje porty
+                struct icmphdr *icmpHeader = (struct icmphdr *)(packet + 14 + ipHeader->ip_hl*4);
+
+            }
+            else if(ipHeader->ip_p == 6)
+            {   //TCP protocol, obsahuje porty
+                struct tcphdr *tcpHeader = (struct tcphdr *)(packet + 14 + ipHeader->ip_hl*4);
+                printf("TCP: destination port: %d, source port: %d\n", tcpHeader->th_dport, tcpHeader->th_sport);
+
+            }
+            else if(ipHeader->ip_p == 17)
+            {   //UDP protocol, obsahuje porty
+                struct udphdr *udpHeader = (struct udphdr *)(packet + 14 + ipHeader->ip_hl*4);
+                printf("UDP: destination port: %d, source port: %d\n", udpHeader->uh_dport, udpHeader->uh_sport);
+
+            }
 
 
         }
         else if (ntohs(ethHeader->ether_type) == ETHERTYPE_ARP)
-        {
+        {       //ARP protocol, neobsahuje porty
             struct ether_arp * arpHeader = (struct ether_arp*)(packet + 14);
             char arpBuffer[100] = {'\0'};
             printf("ARP source ip: %s", inet_ntop(AF_INET, &arpHeader->arp_spa, arpBuffer, 100));
             printf("\n");
-            printf("ARP destination ip: %s", inet_ntop(AF_INET, &arpHeader->arp_spa, arpBuffer, 100));
-            printf("\n");
+            printf("ARP destination ip: %s", inet_ntop(AF_INET, &arpHeader->arp_tpa, arpBuffer, 100));
+            printf("\n\n");
 
 
+
+        }
+        else if(ntohs(ethHeader->ether_type) == ETHERTYPE_IPV6)
+        {
+            struct ip6_hdr * ip6Header = (struct ip6_hdr*)(packet + 14);
+            char ip6Buffer[100] = {'\0'};
+            printf("IPv6: destination address: %s, source address: %s \n", inet_ntop(AF_INET, &ip6Header->ip6_dst, ip6Buffer, 100), inet_ntop(AF_INET, &ip6Header->ip6_src, ip6Buffer, 100));
 
         }
         
