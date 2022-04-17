@@ -407,12 +407,38 @@ int main(int argc, char *argv[])
             }
         }
 
-        for( i = 0; i < header.caplen; i++)
+        int offset = 0;
+        char asciiBuffer [18] = {'\0'};
+        for( int j = 0; j < header.caplen; j++)
         {
-            printf("%02x ", packet[i]);
-            if (i % 10 == 0)
-                printf("\n");
+            
+            if (j % 16 == 0 && j != 0)
+            {
+                printf(" %s\n", asciiBuffer);
+                memset(asciiBuffer, '\0', 18);
+                printf("0x%04d ", offset);
+                offset+= 10;
+
+            }
+            else if(j % 16 == 0 && j == 0)
+            {
+                printf("0x0000 ");
+                offset+= 10;
+
+            }
+            if (packet[j] < 33 || packet[j] > 127)
+            {
+                asciiBuffer[j % 16] = '.';
+
+            }
+            else
+            {
+                asciiBuffer[j % 16] = packet[j];
+
+            }
+            printf("%02x ", packet[j]);
         }
+        printf(" %s\n", asciiBuffer);
         
 
     }
