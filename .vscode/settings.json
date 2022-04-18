@@ -4,6 +4,8 @@
         "ether.h": "c",
         "inet.h": "c",
         "if_ether.h": "c",
-        "types.h": "c"
+        "types.h": "c",
+        "time.h": "c",
+        "unistd.h": "c"
     }
 }

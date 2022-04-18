@@ -1,9 +1,18 @@
+/**
+ * @file ipk-sniffer.c
+ * @author Dalibor Kralik (xkrali20)
+ * @brief Packet sniffer
+ * @date 2022-04-24
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
+
 #include<getopt.h>
-#include <stdio.h>
-#include <pcap.h>
-//#include <bitset.h>
+#include<stdio.h>
+#include<pcap.h>
 #include<arpa/inet.h>
-#include <netinet/if_ether.h>
+#include<netinet/if_ether.h>
 #include<netinet/ether.h>
 #include<netinet/ip6.h>
 #include<netinet/tcp.h>
@@ -18,6 +27,10 @@
 
 
 
+/**
+ * @brief Structure with contains data from program arguments
+ * 
+ */
 struct argFields 
 {
     char* interface;
@@ -31,8 +44,11 @@ struct argFields
 };
 
 
-
-    // https://stackoverflow.com/questions/7939238/dereferencing-pointer-to-incomplete-type-with-struct-ip-and-also-with-struct-iph
+/**
+ * @brief Function which convert and prist MAC addresses with correct format
+ * 
+ * @source https://stackoverflow.com/questions/7939238/dereferencing-pointer-to-incomplete-type-with-struct-ip-and-also-with-struct-iph
+ */
 void PrintPacketInHex(char *mesg, unsigned char *p, int len){
     printf("%s", mesg);
     while(len--)
@@ -46,6 +62,12 @@ void PrintPacketInHex(char *mesg, unsigned char *p, int len){
 }
 
 
+/**
+ * @brief Function which creates TimeStamp with correct format RFC3339
+ * 
+ * @param timeBuffer 
+ * @param header 
+ */
 void TimeStampCreating(char timeBuffer[100], struct pcap_pkthdr header)
 {
     struct tm ts;
@@ -76,6 +98,13 @@ void TimeStampCreating(char timeBuffer[100], struct pcap_pkthdr header)
 
 }
 
+/**
+ * @brief Function creating filter string based on program arguments setted by user 
+ * 
+ * @param filterString 
+ * @param argumentsOfprogram 
+ * @param filteredProgram 
+ */
 void FilterStringCreating(char filterString[], struct argFields argumentsOfprogram, struct bpf_program *filteredProgram)
 {
     char ports[20] = {'\0'};
@@ -147,6 +176,10 @@ void FilterStringCreating(char filterString[], struct argFields argumentsOfprogr
 }
 
 
+/**
+ * @brief FUnction displaying all available interfaces on the computer
+ * 
+ */
 void DisplayAllAvailableInterfaces()
 {
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -172,10 +205,15 @@ void DisplayAllAvailableInterfaces()
     pcap_freealldevs(alldevs);
 }
 
-
+/**
+ * @brief Function which processes and parses program arguments
+ * 
+ * @param argumentsOfprogram 
+ * @param argc 
+ * @param argv 
+ */
 void ArgumentProcessing(struct argFields *argumentsOfprogram, int argc, char *argv[] )
 {
-
 
     for(int i = 1; i < argc; i++)
     {
@@ -246,7 +284,13 @@ void ArgumentProcessing(struct argFields *argumentsOfprogram, int argc, char *ar
     
 }
 
-
+/**
+ * @brief Main function
+ * 
+ * @param argc 
+ * @param argv 
+ * @return int 
+ */
 int main(int argc, char *argv[])
 {
     
@@ -259,8 +303,7 @@ int main(int argc, char *argv[])
     pcap_t *connection;
 
     ArgumentProcessing(&argumentsOfprogram, argc, argv);
-    //printf("%s, %d, %d, %d, %d, %d, %d\n", argumentsOfprogram.interface, argumentsOfprogram.port, argumentsOfprogram.n, argumentsOfprogram.tcp, argumentsOfprogram.udp, argumentsOfprogram.arp, argumentsOfprogram.icmp);
-
+    
     
     if (argumentsOfprogram.interface == NULL)
     {
@@ -275,8 +318,7 @@ int main(int argc, char *argv[])
         exit(2);
     }
 
-    //printf("interfcae: %s\n", argumentsOfprogram.interface);
-
+    
         // Open connection on specific interface;
     connection = pcap_open_live(argumentsOfprogram.interface, BUFSIZ, 1, 1, errbuf);
     if(connection == NULL)
@@ -305,7 +347,7 @@ int main(int argc, char *argv[])
         exit(2);
 
     }
-
+        //Apply filter string
     if(pcap_setfilter(connection, &filteredProgram) == -1)
     {
         fprintf(stderr, "Can't install filter\n");
@@ -319,8 +361,6 @@ int main(int argc, char *argv[])
     for(int i = 0; i < argumentsOfprogram.n; i++)
     {
         packet = pcap_next(connection, &header);
-            //DLZKA framu
-        //printf("Header length %d, caplen: %d, ",header.len, header.caplen);
         char timeBuffer[100] = {'\0'};
 
         TimeStampCreating(timeBuffer, header);
@@ -331,21 +371,19 @@ int main(int argc, char *argv[])
         
         struct ether_header *ethHeader = (struct ether_header *)packet;
             //PROTOKOL A JEHO str a dst MAC adresa
-        //printf("protocol : %x\n", ntohs(ethHeader->ether_type));
         PrintPacketInHex("source MAC : ", ethHeader->ether_shost,6);
         printf("\n");
         PrintPacketInHex("destination MAC : ", ethHeader->ether_dhost,6);
         printf("\n");
         printf("frame length: %d bytes\n", header.len);
         
-        
+            //Zistovanie ci sa jedna o IPv4, ARP alebo IPv6 packet a na zaklade toho prebiehalo dalsie castovanie a parsovanie paketu        
         if(ntohs(ethHeader->ether_type) == ETHERTYPE_IP)
         {
             struct ip * ipHeader = (struct ip*)(packet + 14);
             char ipBuffer1[100] = {'\0'};
             char ipBuffer2[100] = {'\0'};
                 //src a dest IP adresa
-            //printf("verzia: %d, protocol: %d, lenght: %d,destAdr: %s, srcAdr: %s, IHL: %d \n\n", ipHeader->ip_v, ipHeader->ip_p, ipHeader->ip_len, inet_ntop(AF_INET, &ipHeader->ip_dst.s_addr, ipBuffer, 100), inet_ntop(AF_INET, &ipHeader->ip_src.s_addr, ipBuffer, 100), ipHeader->ip_hl);
             printf("IPv4\nsrc IP: %s\ndst IP: %s\nprotocol: %d\n",inet_ntop(AF_INET, &ipHeader->ip_src.s_addr, ipBuffer1, 100), inet_ntop(AF_INET, &ipHeader->ip_dst.s_addr, ipBuffer2, 100), ipHeader->ip_p);
             
                 // IPv4 nema fixnu dlzku headru, preto je v premenne ip_hl ulozena dlzka headru v 4 bytovych slovach, takze 32 bitov.
@@ -409,6 +447,7 @@ int main(int argc, char *argv[])
 
         int offset = 0;
         char asciiBuffer [18] = {'\0'};
+            //Vypis dat
         for( int j = 0; j < header.caplen; j++)
         {
             
@@ -438,7 +477,7 @@ int main(int argc, char *argv[])
             }
             printf("%02x ", packet[j]);
         }
-        printf(" %s\n", asciiBuffer);
+        printf(" %s\n\n", asciiBuffer);
         
 
     }
