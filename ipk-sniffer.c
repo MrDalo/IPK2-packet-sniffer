@@ -8,7 +8,6 @@
  * 
  */
 
-#include<getopt.h>
 #include<stdio.h>
 #include<pcap.h>
 #include<arpa/inet.h>
@@ -20,7 +19,6 @@
 #include<netinet/udp.h>
 #include<unistd.h>
 #include<stdlib.h>
-#include<stdio.h>
 #include<stdbool.h>
 #include<string.h>
 #include<time.h>
