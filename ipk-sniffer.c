@@ -156,12 +156,12 @@ void FilterStringCreating(char filterString[], struct argFields argumentsOfprogr
 
         if(filterString[0] != '\0')
         {
-            sprintf(helpString, "or (icmp)");
+            sprintf(helpString, "or (icmp or icmp6)");
             strcat(filterString, helpString);
         }
         else
         {
-            sprintf(filterString, "(icmp)");
+            sprintf(filterString, "(icmp or icmp6)");
         }
 
     }
