@@ -443,26 +443,22 @@ int main(int argc, char *argv[])
             }
         }
 
-        int offset = 0;
+
         char asciiBuffer [18] = {'\0'};
             //Vypis dat
         for( int j = 0; j < header.caplen; j++)
         {
             
-            if (j % 16 == 0 && j != 0)
+            if (j % 16 == 0)
             {
                 printf(" %s\n", asciiBuffer);
                 memset(asciiBuffer, '\0', 18);
-                printf("0x%04d ", offset);
-                offset+= 10;
+                printf("0x%04x ", j);
+                
 
             }
-            else if(j % 16 == 0 && j == 0)
-            {
-                printf("0x0000 ");
-                offset+= 10;
+            
 
-            }
             if (packet[j] < 33 || packet[j] > 127)
             {
                 asciiBuffer[j % 16] = '.';
