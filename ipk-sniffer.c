@@ -422,7 +422,7 @@ int main(int argc, char *argv[])
             struct ip6_hdr * ip6Header = (struct ip6_hdr*)(packet + 14);
             char ip6Buffer1[100] = {'\0'};
             char ip6Buffer2[100] = {'\0'};
-            printf("IPv6\nsrc IP: %s\ndst IP: %s\nprotocol: %d", inet_ntop(AF_INET6, &ip6Header->ip6_src, ip6Buffer1, 100), inet_ntop(AF_INET6, &ip6Header->ip6_dst, ip6Buffer2, 100), ip6Header->ip6_ctlun.ip6_un1.ip6_un1_nxt);
+            printf("IPv6\nsrc IP: %s\ndst IP: %s\nprotocol: %d\n", inet_ntop(AF_INET6, &ip6Header->ip6_src, ip6Buffer1, 100), inet_ntop(AF_INET6, &ip6Header->ip6_dst, ip6Buffer2, 100), ip6Header->ip6_ctlun.ip6_un1.ip6_un1_nxt);
             
             if(ip6Header->ip6_ctlun.ip6_un1.ip6_un1_nxt == 58)
             {   //ICMP protokol
